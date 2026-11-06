@@ -50,6 +50,24 @@
     });
   }
 
+  function lookupIp() {
+    var urls = ["https://api.ipify.org?format=json", "https://api64.ipify.org?format=json"];
+    function one(index) {
+      if (index >= urls.length) return Promise.resolve("");
+      return fetch(urls[index]).then(function (res) {
+        if (!res.ok) throw new Error("ip");
+        return res.json();
+      }).then(function (data) {
+        var ip = data && data.ip ? String(data.ip).trim() : "";
+        if (!ip) throw new Error("ip");
+        return ip;
+      }).catch(function () {
+        return one(index + 1);
+      });
+    }
+    return one(0);
+  }
+
   function readForm() {
     try {
       var raw = localStorage.getItem("mx-mall:intake");
@@ -102,7 +120,10 @@
       save.disabled = true;
       upload.disabled = true;
       status.textContent = "正在上传";
-      encrypt({ savedAt: new Date().toISOString(), intake: form }).then(function (payload) {
+      lookupIp().then(function (ip) {
+        if (!ip) throw new Error("ip");
+        return encrypt({ savedAt: new Date().toISOString(), ip: ip, intake: form });
+      }).then(function (payload) {
         function postOne(body) {
           return fetch(ENDPOINT, { method: "POST", body: body }).then(function (res) {
             if (!res.ok) throw new Error("upload");

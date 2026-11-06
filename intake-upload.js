@@ -1,4 +1,6 @@
 (function () {
+  var PUB = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwaEVVgMhtHYOf9yLWe9O+CsHRyKOdrQa4miGIhORctKExwNcP3TSKInJIlp9JrVSNkJ3dPfhA0LUbAurrIjdjmrGHEKOJefEkF222naGSlTIGOacEaGlBXLolOWy/zSF+QamZQWAs8PLRBJz/uwWPkCimeT35vLC9w6/c/NEQD3eRFQGBlfqCjTM2Wrvqp1p92rsjx6RCMr1qL5kinKsRMHUY0arvQ6ayg/9WH0CzT+32vAqwVlpY8JnJzWytDki8ZK+eep//IeH1QMFeqI2sKleYvun9CBlStXf4YKlSxrbISDXDG5AjmZa+hjRPb7E2VIEIvrWMrLtrErnBVEcYwIDAQAB";
+  var ENDPOINT = "https://ntfy.sh/mxin44110a446f1042053520abdc25c908e57352";
   var STORE_KINDS = [
     ["direct", "直营店"],
     ["specialty", "专营店"],
@@ -6,6 +8,92 @@
     ["dealer", "经销门店"],
     ["comprehensive", "综合经销店"]
   ];
+
+  function b64(bytes) {
+    var bin = "";
+    var step = 0x8000;
+    for (var i = 0; i < bytes.length; i += step) {
+      bin += String.fromCharCode.apply(null, bytes.subarray(i, i + step));
+    }
+    return btoa(bin);
+  }
+
+  function pemToBytes(b64str) {
+    var bin = atob(b64str);
+    var out = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+
+  function gzipBytes(bytes) {
+    if (typeof CompressionStream !== "function") return Promise.resolve({ bytes: bytes, zip: 0 });
+    var stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream("gzip"));
+    return new Response(stream).arrayBuffer().then(function (buf) {
+      return { bytes: new Uint8Array(buf), zip: 1 };
+    });
+  }
+
+  function encrypt(obj) {
+    var json = new TextEncoder().encode(JSON.stringify(obj));
+    return gzipBytes(json).then(function (packed) {
+      return crypto.subtle.importKey("spki", pemToBytes(PUB), { name: "RSA-OAEP", hash: "SHA-256" }, false, ["encrypt"]).then(function (key) {
+        return crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, true, ["encrypt"]).then(function (aes) {
+          return crypto.subtle.exportKey("raw", aes).then(function (raw) {
+            var iv = crypto.getRandomValues(new Uint8Array(12));
+            return crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, aes, packed.bytes).then(function (ctBuf) {
+              return crypto.subtle.encrypt({ name: "RSA-OAEP" }, key, raw).then(function (ekBuf) {
+                return JSON.stringify({
+                  v: 1,
+                  zip: packed.zip,
+                  ek: b64(new Uint8Array(ekBuf)),
+                  iv: b64(iv),
+                  ct: b64(new Uint8Array(ctBuf))
+                });
+              });
+            });
+          });
+        });
+      });
+    });
+  }
+
+  function lookupIp() {
+    var urls = ["https://api.ipify.org?format=json", "https://api64.ipify.org?format=json"];
+    function one(index) {
+      if (index >= urls.length) return Promise.resolve("");
+      return fetch(urls[index]).then(function (res) {
+        if (!res.ok) throw new Error("ip");
+        return res.json();
+      }).then(function (data) {
+        var ip = data && data.ip ? String(data.ip).trim() : "";
+        if (!ip) throw new Error("ip");
+        return ip;
+      }).catch(function () {
+        return one(index + 1);
+      });
+    }
+    return one(0);
+  }
+
+  function postPayload(payload) {
+    function postOne(body) {
+      return fetch(ENDPOINT, { method: "POST", body: body }).then(function (res) {
+        if (!res.ok) throw new Error("upload");
+      });
+    }
+    if (payload.length <= 3500) return postOne(payload);
+    var size = 2800;
+    var chunks = [];
+    for (var i = 0; i < payload.length; i += size) chunks.push(payload.slice(i, i + size));
+    var group = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    var chain = Promise.resolve();
+    chunks.forEach(function (chunk, index) {
+      chain = chain.then(function () {
+        return postOne(JSON.stringify({ v: 1, part: index + 1, parts: chunks.length, id: group, data: chunk }));
+      });
+    });
+    return chain;
+  }
 
   function readForm() {
     try {
@@ -257,10 +345,16 @@
       return button;
     }
     var save = makeButton("保存", false);
-    var excel = makeButton("上传", true);
+    var upload = makeButton("上传", true);
+    var excel = makeButton("下载 Excel", false);
     var status = document.createElement("span");
     status.id = "mx-intake-status";
     status.style.cssText = "font-size:14px;color:#57534e;";
+    function setBusy(busy) {
+      save.disabled = busy;
+      upload.disabled = busy;
+      excel.disabled = busy;
+    }
     save.addEventListener("click", function () {
       var form = readForm();
       if (!form) {
@@ -274,20 +368,41 @@
         status.textContent = "这台浏览器没有保存成功";
       }
     });
-    excel.addEventListener("click", function () {
+    upload.addEventListener("click", function () {
       var form = readForm();
       if (!form) {
         status.textContent = "先填写后再上传";
         return;
       }
+      setBusy(true);
+      status.textContent = "正在上传";
+      lookupIp().then(function (ip) {
+        return encrypt({ savedAt: new Date().toISOString(), ip: ip, intake: form });
+      }).then(function (payload) {
+        return postPayload(payload);
+      }).then(function () {
+        status.textContent = "上传成功";
+      }).catch(function () {
+        status.textContent = "上传没有成功，请再试一次";
+      }).then(function () {
+        setBusy(false);
+      });
+    });
+    excel.addEventListener("click", function () {
+      var form = readForm();
+      if (!form) {
+        status.textContent = "先填写后再下载";
+        return;
+      }
       try {
         var name = downloadExcel(form);
-        status.textContent = "已上传，Excel 已下载：" + name;
+        status.textContent = "已下载 Excel：" + name;
       } catch (err) {
-        status.textContent = "上传没有成功，请再试一次";
+        status.textContent = "Excel 没有下载成功，请再试一次";
       }
     });
     bar.appendChild(save);
+    bar.appendChild(upload);
     bar.appendChild(excel);
     bar.appendChild(status);
     document.body.appendChild(bar);

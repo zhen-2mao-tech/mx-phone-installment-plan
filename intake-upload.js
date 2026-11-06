@@ -153,6 +153,7 @@
     });
     add("法律和监管", "分期要依赖的当地法律", form.law);
     add("法律和监管", "市场监督管理的要求", form.regulator);
+    add("其他建议和意见", "建议和意见", form.suggestions);
     return rows;
   }
 

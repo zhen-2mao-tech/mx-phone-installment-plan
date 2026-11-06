@@ -280,7 +280,8 @@
         { id: "q20274", period: "2027 \u5E74\u7B2C\u56DB\u5B63\u5EA6", total: "", installment: "" }
       ],
       law: "",
-      regulator: ""
+      regulator: "",
+      suggestions: ""
     };
   }
   function intakeAnswerCount(state) {
@@ -302,6 +303,7 @@
       state.customer,
       state.law,
       state.regulator,
+      state.suggestions,
       ...STORE_KINDS.flatMap((kind) => {
         const row = state.stores[kind.key];
         return [row.count, row.inventory, row.promoter];
@@ -571,7 +573,7 @@
         onChange: (value) => patch({ regulator: value }),
         rows: 4
       }
-    ));
+    ), /* @__PURE__ */ React.createElement(Divider, null), /* @__PURE__ */ React.createElement(H3, null, "\u5176\u4ED6\u5EFA\u8BAE\u548C\u610F\u89C1"), /* @__PURE__ */ React.createElement(Text, { tone: "secondary" }, "\u4E0A\u9762\u5404\u680F\u6CA1\u5199\u5230\u7684\uFF0C\u586B\u5199\u4EBA\u53EF\u4EE5\u5728\u8FD9\u91CC\u81EA\u7531\u5199\u3002"), /* @__PURE__ */ React.createElement(TextArea, { value: form.suggestions, onChange: (value) => patch({ suggestions: value }), rows: 6, placeholder: "\u5EFA\u8BAE\u3001\u610F\u89C1\u3001\u8865\u5145\u8BF4\u660E" }));
   }
   function FlowGrid() {
     const theme2 = useHostTheme();

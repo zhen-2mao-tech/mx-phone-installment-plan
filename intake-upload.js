@@ -239,7 +239,8 @@
     document.body.appendChild(link);
     link.click();
     link.remove();
-    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+    return link.download;
   }
 
   function ensureBar() {
@@ -256,7 +257,7 @@
       return button;
     }
     var save = makeButton("保存", false);
-    var excel = makeButton("下载 Excel", true);
+    var excel = makeButton("上传", true);
     var status = document.createElement("span");
     status.id = "mx-intake-status";
     status.style.cssText = "font-size:14px;color:#57534e;";
@@ -276,14 +277,14 @@
     excel.addEventListener("click", function () {
       var form = readForm();
       if (!form) {
-        status.textContent = "先填写后再下载";
+        status.textContent = "先填写后再上传";
         return;
       }
       try {
-        downloadExcel(form);
-        status.textContent = "已下载 Excel";
+        var name = downloadExcel(form);
+        status.textContent = "已上传，Excel 已下载：" + name;
       } catch (err) {
-        status.textContent = "Excel 没有下载成功，请再试一次";
+        status.textContent = "上传没有成功，请再试一次";
       }
     });
     bar.appendChild(save);

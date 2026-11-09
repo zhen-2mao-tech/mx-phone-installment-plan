@@ -152,7 +152,7 @@
   ];
   function MxPhoneInstallmentMall() {
     const [section, setSection] = useCanvasState("section", "overview");
-    return /* @__PURE__ */ React.createElement(Stack, { gap: 20 }, /* @__PURE__ */ React.createElement(Stack, { gap: 8 }, /* @__PURE__ */ React.createElement(H1, null, "\u624B\u673A\u5206\u671F\u5546\u57CE\u8FD0\u8425\u65B9\u6848"), /* @__PURE__ */ React.createElement(Text, { tone: "secondary" }, "\u8FD9\u4EFD\u65B9\u6848\u4EA4\u7ED9\u624B\u673A\u5382\u5546\u3002\u5199\u56DB\u4E2A\u89D2\u8272\u5404\u81EA\u505A\u4EC0\u4E48\uFF0C\u518D\u6309\u540C\u4E00\u4E2A\u89D2\u8272\u5199\u5B83\u62FF\u51FA\u4EC0\u4E48\u8D44\u6E90\u3001\u8FD9\u4E9B\u8D44\u6E90\u8981\u7EF4\u6301\u5230\u4EC0\u4E48\u6548\u7387\u3002")), /* @__PURE__ */ React.createElement(Row, { gap: 8, wrap: true }, SECTIONS.map((item) => /* @__PURE__ */ React.createElement(
+    return /* @__PURE__ */ React.createElement(Stack, { gap: 20 }, /* @__PURE__ */ React.createElement(Stack, { gap: 8 }, /* @__PURE__ */ React.createElement(H1, null, "\u624B\u673A\u5206\u671F\u5546\u57CE\u8FD0\u8425\u65B9\u6848"), /* @__PURE__ */ React.createElement(Text, { tone: "secondary" }, "\u8FD9\u4EFD\u65B9\u6848\u4EA4\u7ED9\u624B\u673A\u5382\u5546\u3002\u5148\u5217\u56DB\u4E2A\u89D2\u8272\u7684\u804C\u8D23\uFF0C\u518D\u6309\u540C\u4E00\u89D2\u8272\u5217\u63D0\u4F9B\u7684\u8D44\u6E90\u4E0E\u6548\u7387\u8981\u6C42\u3002")), /* @__PURE__ */ React.createElement(Row, { gap: 8, wrap: true }, SECTIONS.map((item) => /* @__PURE__ */ React.createElement(
       Pill,
       {
         key: item.id,
